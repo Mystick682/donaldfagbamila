@@ -143,6 +143,7 @@ h2.title{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:clam
 .about-grid{display:grid; grid-template-columns:.9fr 1.1fr; gap:64px; align-items:center;}
 .about-photo{aspect-ratio:4/5; border-radius:16px; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center;}
 .about-photo span{font-family:'Space Grotesk',sans-serif; font-size:64px; color:rgba(255,255,255,.1);}
+.about-photo img{width:100%; height:100%; object-fit:cover; display:block;}
 .about-desc{color:var(--muted); margin-bottom:40px; line-height:1.7; max-width:480px;}
 .stats{display:grid; grid-template-columns:1fr 1fr; gap:32px;}
 .stat-num{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:40px; color:var(--accent);}
@@ -161,6 +162,7 @@ h2.title{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:clam
 .project-row.flip .p-media{order:2;}
 .p-media{aspect-ratio:16/9; border-radius:12px; overflow:hidden; background:rgba(34,211,238,.08); display:flex; align-items:center; justify-content:center;}
 .p-media span{font-family:'Space Grotesk',sans-serif; font-size:36px; color:rgba(255,255,255,.15);}
+.p-media img{width:100%; height:100%; object-fit:cover; display:block;}
 .p-cat{font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.2em; color:var(--accent); margin-bottom:12px;}
 .p-title{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; margin-bottom:12px;}
 .p-desc{font-size:14px; color:var(--muted); margin-bottom:16px; line-height:1.6;}
@@ -371,7 +373,7 @@ footer{padding:96px var(--pad) 40px; border-top:1px solid var(--line);}
 <section id="about" class="section">
   <div class="wrap about-grid">
     <div class="reveal">
-      <div class="about-photo glass noise-grid"><span>G</span></div>
+      <div class="about-photo glass noise-grid" id="aboutPhoto"><span>G</span></div>
     </div>
     <div>
       <p class="eyebrow reveal">ABOUT</p>
@@ -687,6 +689,37 @@ function bindCounters(){
   });
 }
 
+/* ABOUT PHOTO — pulls from a pool of asset images */
+// Replace these with your real image paths (e.g. 'assets/photo-1.jpg') or URLs.
+const aboutPhotoAssets=[
+  'assets/about.jpg',
+];
+let _aboutPhotoIndex=-1; // in-memory, resets each page load
+function setAboutPhoto(mode='random'){ // mode: 'random' or 'rotate'
+  const container=document.getElementById('aboutPhoto');
+  if(!container || !aboutPhotoAssets.length) return;
+
+  let index;
+  if(mode==='rotate'){
+    _aboutPhotoIndex=(_aboutPhotoIndex+1) % aboutPhotoAssets.length;
+    index=_aboutPhotoIndex;
+  } else {
+    index=Math.floor(Math.random()*aboutPhotoAssets.length);
+  }
+
+  const src=aboutPhotoAssets[index];
+  const img=new Image();
+  img.alt='Glory — portrait';
+  img.onload=()=>{
+    container.innerHTML='';
+    container.appendChild(img);
+    if(typeof hasGSAP!=='undefined' && hasGSAP) ScrollTrigger.refresh();
+  };
+  img.onerror=()=>{ /* keep placeholder "G" if the asset fails to load */ };
+  img.src=src;
+}
+setAboutPhoto('random');
+
 /* CONTENT: SERVICES */
 const services=[
   ['Website Design','Interfaces that feel considered, not assembled.'],
@@ -707,14 +740,15 @@ services.forEach(([t,d])=>{
   servicesGrid.appendChild(card);
 });
 
-/* PROJECTS */
+/* PROJECTS — each project pulls its own screenshot from assets/projects/.
+   If the image file isn't found yet, it falls back to the text placeholder. */
 const projects=[
-  ['McDonalds Group','SaaS Dashboard','React · Tailwind · Recharts','A real-time analytics dashboard rebuilt for clarity and speed under heavy data loads.','https://www.mcdonaldsgroup.org/','https://github.com/glory-dev/nimbus-analytics'],
-  ['Solace Studio','Portfolio Site','Next.js · GSAP · Three.js','An immersive portfolio for a design studio, led by scroll-driven 3D storytelling.','https://solace.studio','https://github.com/glory-dev/solace-studio'],
-  ['Marketplace OS','E-commerce Platform','Node · Postgres · Stripe','A multi-vendor marketplace with custom checkout, inventory and seller tooling.','https://marketplace-os.example.com','https://github.com/glory-dev/marketplace-os'],
+  ['McDonalds Group','SaaS Dashboard','React · Tailwind · Recharts','A real-time analytics dashboard rebuilt for clarity and speed under heavy data loads.','https://mcdonaldsgroup.org','https://github.com/Mystick682/McDonaldGroups','assets/a.jpg'],
+  ['Travel Wiser','Portfolio Site','Next.js · GSAP · Three.js','An immersive portfolio for a design studio, led by scroll-driven 3D storytelling.','https://travel-wiser.vercel.app/','https://github.com/Mystick682/TravelWiser','assets/b.jpg'],
+  ['Luxe Empire','E-commerce Platform','Node · Postgres · Stripe','A multi-vendor marketplace with custom checkout, inventory and seller tooling.','https://luxe-empire-liart.vercel.app/','https://github.com/Mystick682/Luxe-Empire','assets/c.jpg'],
 ];
 const projectsList=document.getElementById('projectsList');
-projects.forEach(([name,cat,tech,desc,liveUrl,githubUrl],i)=>{
+projects.forEach(([name,cat,tech,desc,liveUrl,githubUrl,image],i)=>{
   const row=document.createElement('div');
   row.className='reveal glass glow-hover project-row'+(i%2?' flip':'');
   row.innerHTML=`
@@ -730,6 +764,20 @@ projects.forEach(([name,cat,tech,desc,liveUrl,githubUrl],i)=>{
       </div>
     </div>`;
   projectsList.appendChild(row);
+
+  // Swap the placeholder for a real screenshot if one is set and loads successfully
+  if(image){
+    const media=row.querySelector('.p-media');
+    const img=new Image();
+    img.alt=name;
+    img.onload=()=>{
+      media.innerHTML='';
+      media.appendChild(img);
+      if(typeof hasGSAP!=='undefined' && hasGSAP) ScrollTrigger.refresh();
+    };
+    img.onerror=()=>{ /* keep the text placeholder if the screenshot isn't found */ };
+    img.src=image;
+  }
 });
 
 /* STACK */
@@ -861,6 +909,15 @@ window.addEventListener('keydown',e=>{
 bindCursorTargets();
 bindReveals();
 bindCounters();
+
+/* Keep ScrollTrigger positions accurate after late layout shifts
+   (web fonts swapping in, images loading, window resize) */
+if(hasGSAP){
+  const refresh=()=>ScrollTrigger.refresh();
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(refresh); }
+  window.addEventListener('load', refresh);
+  setTimeout(refresh, 1200); // safety net for any late-loading asset
+}
 </script>
 </body>
 </html>
